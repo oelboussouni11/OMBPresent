@@ -31,10 +31,12 @@ async def recognize(group_id: int, image: UploadFile = File(...), db: Session = 
         if not member.face_encoding:
             continue
         stored = pickle.loads(member.face_encoding)
-        score = float(np.dot(embedding, stored) / (np.linalg.norm(embedding) * np.linalg.norm(stored)))
-        if score > best_score:
-            best_score = score
-            best_match = member
+        encodings = stored if isinstance(stored, list) else [stored]
+        for enc in encodings:
+            score = float(np.dot(embedding, enc) / (np.linalg.norm(embedding) * np.linalg.norm(enc)))
+            if score > best_score:
+                best_score = score
+                best_match = member
 
     if best_score > 0.4 and best_match:
         # Check if already marked today

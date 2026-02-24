@@ -58,6 +58,15 @@ async def add_member(
     if not group:
         return {"status": "error", "message": "Group not found"}
 
+    # Check for duplicate name in group
+    existing = db.query(Member).join(Member.groups).filter(
+        Group.id == group_id,
+        Member.first_name == first_name,
+        Member.last_name == last_name,
+    ).first()
+    if existing:
+        return {"status": "error", "message": f"{first_name} {last_name} already exists in this group"}
+
     image_bytes = await image.read()
     embedding, error = get_face_embedding(image_bytes)
     if error:
@@ -67,7 +76,7 @@ async def add_member(
         first_name=first_name,
         last_name=last_name,
         owner_id=user.id,
-        face_encoding=pickle.dumps(embedding),
+        face_encoding=pickle.dumps([embedding]),
     )
     db.add(member)
     member.groups.append(group)
@@ -79,6 +88,32 @@ async def add_member(
         "first_name": member.first_name,
         "last_name": member.last_name,
     }}
+
+
+@router.post("/members/{member_id}/add-encoding")
+async def add_encoding(member_id: int, image: UploadFile = File(...), db: Session = Depends(get_db)):
+    member = db.query(Member).filter(Member.id == member_id).first()
+    if not member:
+        return {"status": "error", "message": "Member not found"}
+
+    image_bytes = await image.read()
+    embedding, error = get_face_embedding(image_bytes)
+    if error:
+        return {"status": "error", "message": error}
+
+    if member.face_encoding:
+        existing = pickle.loads(member.face_encoding)
+        if isinstance(existing, list):
+            existing.append(embedding)
+        else:
+            existing = [existing, embedding]
+    else:
+        existing = [embedding]
+
+    member.face_encoding = pickle.dumps(existing)
+    db.commit()
+
+    return {"status": "success", "message": "Encoding added"}
 
 
 @router.post("/groups/{group_id}/members/{member_id}/link")
