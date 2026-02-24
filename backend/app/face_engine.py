@@ -4,14 +4,19 @@ import cv2
 import pickle
 from insightface.app import FaceAnalysis
 
-# Initialize face analysis model
-face_app = FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"])
-face_app.prepare(ctx_id=0, det_size=(640, 640))
+face_app = None
 
-# Storage path for face encodings
+
+def get_face_app():
+    global face_app
+    if face_app is None:
+        face_app = FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"])
+        face_app.prepare(ctx_id=0, det_size=(320, 320))
+    return face_app
+
+
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 ENCODINGS_FILE = os.path.join(DATA_DIR, "encodings.pkl")
-
 os.makedirs(DATA_DIR, exist_ok=True)
 
 
@@ -28,13 +33,13 @@ def save_encodings(data):
 
 
 def get_face_embedding(image_bytes):
-    """Extract face embedding from image bytes."""
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
         return None, "Invalid image"
 
-    faces = face_app.get(img)
+    app = get_face_app()
+    faces = app.get(img)
     if len(faces) == 0:
         return None, "No face detected"
     if len(faces) > 1:
@@ -44,7 +49,6 @@ def get_face_embedding(image_bytes):
 
 
 def enroll_face(name, image_bytes):
-    """Enroll a new face."""
     embedding, error = get_face_embedding(image_bytes)
     if error:
         return False, error
@@ -58,7 +62,6 @@ def enroll_face(name, image_bytes):
 
 
 def recognize_face(image_bytes):
-    """Recognize a face from image."""
     embedding, error = get_face_embedding(image_bytes)
     if error:
         return None, error
