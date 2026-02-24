@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.face_engine import get_face_embedding
-from models import Member
+from models import Member, Group, User
 import pickle
 
 router = APIRouter()
@@ -10,9 +10,12 @@ router = APIRouter()
 
 @router.get("/groups/{group_id}/members")
 def get_members(group_id: int, db: Session = Depends(get_db)):
-    members = db.query(Member).filter(Member.group_id == group_id).all()
+    group = db.query(Group).filter(Group.id == group_id).first()
+    if not group:
+        return {"status": "error", "message": "Group not found"}
+
     result = []
-    for m in members:
+    for m in group.members:
         result.append({
             "id": m.id,
             "first_name": m.first_name,
@@ -22,14 +25,39 @@ def get_members(group_id: int, db: Session = Depends(get_db)):
     return {"status": "success", "data": result}
 
 
+@router.get("/members")
+def get_user_members(email: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return {"status": "success", "data": []}
+
+    result = []
+    for m in user.members:
+        result.append({
+            "id": m.id,
+            "first_name": m.first_name,
+            "last_name": m.last_name,
+        })
+    return {"status": "success", "data": result}
+
+
 @router.post("/groups/{group_id}/members")
 async def add_member(
     group_id: int,
     first_name: str = Form(...),
     last_name: str = Form(...),
+    email: str = Form(...),
     image: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return {"status": "error", "message": "User not found"}
+
+    group = db.query(Group).filter(Group.id == group_id).first()
+    if not group:
+        return {"status": "error", "message": "Group not found"}
+
     image_bytes = await image.read()
     embedding, error = get_face_embedding(image_bytes)
     if error:
@@ -38,10 +66,11 @@ async def add_member(
     member = Member(
         first_name=first_name,
         last_name=last_name,
-        group_id=group_id,
+        owner_id=user.id,
         face_encoding=pickle.dumps(embedding),
     )
     db.add(member)
+    member.groups.append(group)
     db.commit()
     db.refresh(member)
 
@@ -50,6 +79,20 @@ async def add_member(
         "first_name": member.first_name,
         "last_name": member.last_name,
     }}
+
+
+@router.post("/groups/{group_id}/members/{member_id}/link")
+def link_member_to_group(group_id: int, member_id: int, db: Session = Depends(get_db)):
+    group = db.query(Group).filter(Group.id == group_id).first()
+    member = db.query(Member).filter(Member.id == member_id).first()
+    if not group or not member:
+        return {"status": "error", "message": "Not found"}
+
+    if member not in group.members:
+        group.members.append(member)
+        db.commit()
+
+    return {"status": "success", "message": f"{member.first_name} added to {group.name}"}
 
 
 @router.delete("/members/{member_id}")

@@ -1,7 +1,15 @@
-from sqlalchemy import Column, Integer, String, DateTime, Float, ForeignKey, LargeBinary, Text
+from sqlalchemy import Column, Integer, String, DateTime, Float, ForeignKey, LargeBinary, Text, Table
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
+
+# Join table: members <-> groups
+group_members = Table(
+    "group_members",
+    Base.metadata,
+    Column("group_id", Integer, ForeignKey("groups.id"), primary_key=True),
+    Column("member_id", Integer, ForeignKey("members.id"), primary_key=True),
+)
 
 
 class User(Base):
@@ -11,6 +19,7 @@ class User(Base):
     name = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     groups = relationship("Group", back_populates="owner")
+    members = relationship("Member", back_populates="owner")
 
 
 class Group(Base):
@@ -21,7 +30,7 @@ class Group(Base):
     owner_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
     owner = relationship("User", back_populates="groups")
-    members = relationship("Member", back_populates="group")
+    members = relationship("Member", secondary=group_members, back_populates="groups")
 
 
 class Member(Base):
@@ -29,10 +38,11 @@ class Member(Base):
     id = Column(Integer, primary_key=True)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
-    group_id = Column(Integer, ForeignKey("groups.id"))
+    owner_id = Column(Integer, ForeignKey("users.id"))
     face_encoding = Column(LargeBinary)
     created_at = Column(DateTime, default=datetime.utcnow)
-    group = relationship("Group", back_populates="members")
+    owner = relationship("User", back_populates="members")
+    groups = relationship("Group", secondary=group_members, back_populates="members")
     attendances = relationship("Attendance", back_populates="member")
 
 
