@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -13,7 +14,7 @@ interface AttendanceEntry {
   already_marked?: boolean;
 }
 
-export default function Attend() {
+function AttendContent() {
   const searchParams = useSearchParams();
   const groupId = searchParams.get("group");
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -147,10 +148,8 @@ export default function Attend() {
   return (
     <div className="min-h-screen bg-[#0A0A0B] flex flex-col md:flex-row overflow-hidden">
       <canvas ref={canvasRef} className="hidden" />
-
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 relative">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-emerald-500/[0.03] rounded-full blur-[100px] pointer-events-none" />
-
         <Link
           href={`/dashboard/group/${groupId}`}
           className="absolute top-6 left-6 flex items-center gap-2 text-sm text-gray-500 hover:text-white transition-colors duration-200 z-10"
@@ -169,7 +168,6 @@ export default function Attend() {
           </svg>
           Back to Group
         </Link>
-
         <div className="relative z-10 text-center mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-white">
             Attendance Scanner
@@ -178,13 +176,11 @@ export default function Attend() {
             Faces are recognized automatically
           </p>
         </div>
-
         <div className="relative z-10 w-80 h-80 md:w-[400px] md:h-[400px]">
           <div className="absolute top-0 left-0 w-12 h-12 border-t-2 border-l-2 border-emerald-500/50 rounded-tl-lg" />
           <div className="absolute top-0 right-0 w-12 h-12 border-t-2 border-r-2 border-emerald-500/50 rounded-tr-lg" />
           <div className="absolute bottom-0 left-0 w-12 h-12 border-b-2 border-l-2 border-emerald-500/50 rounded-bl-lg" />
           <div className="absolute bottom-0 right-0 w-12 h-12 border-b-2 border-r-2 border-emerald-500/50 rounded-br-lg" />
-
           <div className="absolute inset-2 rounded-lg overflow-hidden">
             <video
               ref={videoRef}
@@ -197,7 +193,6 @@ export default function Attend() {
               <div className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-500 to-transparent animate-scan-line" />
             )}
           </div>
-
           {lastResult && (
             <div className="absolute bottom-4 left-4 right-4 bg-emerald-500/90 backdrop-blur-sm rounded-lg px-4 py-3 flex items-center gap-3 z-10">
               <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-bold">
@@ -224,7 +219,6 @@ export default function Attend() {
             </div>
           )}
         </div>
-
         <div className="relative z-10 mt-8 flex items-center gap-4">
           <button
             onClick={() => setScanning(!scanning)}
@@ -234,7 +228,6 @@ export default function Attend() {
           </button>
         </div>
       </div>
-
       <div className="w-full md:w-96 bg-white/[0.02] border-l border-white/5 flex flex-col">
         <div className="px-6 py-5 border-b border-white/5">
           <div className="flex items-center justify-between">
@@ -246,7 +239,6 @@ export default function Attend() {
             </span>
           </div>
         </div>
-
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {log.length === 0 ? (
             <div className="text-center py-20">
@@ -302,5 +294,19 @@ export default function Attend() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Attend() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0A0A0B] flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <AttendContent />
+    </Suspense>
   );
 }

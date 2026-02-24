@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -8,7 +9,7 @@ import Link from "next/link";
 const TOTAL_SEGMENTS = 8;
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
-export default function MemberEnroll() {
+function MemberEnrollContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -77,7 +78,6 @@ export default function MemberEnroll() {
         try {
           let res;
           if (memberId === null) {
-            // First capture: create the member
             const formData = new FormData();
             formData.append("first_name", firstName);
             formData.append("last_name", lastName);
@@ -95,7 +95,6 @@ export default function MemberEnroll() {
               setStatus(data.message || "No face detected — adjust position");
             }
           } else {
-            // Subsequent captures: add more encodings
             const formData = new FormData();
             formData.append("image", blob, "face.jpg");
             res = await fetch(`${API_URL}/members/${memberId}/add-encoding`, {
@@ -132,14 +131,12 @@ export default function MemberEnroll() {
     );
   }, [firstName, lastName, session, groupId, sending, enrolled, memberId]);
 
-  // Auto-capture
   useEffect(() => {
     if (!cameraReady || enrolled) return;
     const interval = setInterval(captureAndSend, 750);
     return () => clearInterval(interval);
   }, [cameraReady, enrolled, captureAndSend]);
 
-  // Rotating scan line
   useEffect(() => {
     if (!cameraReady || enrolled) return;
     const interval = setInterval(() => {
@@ -182,7 +179,6 @@ export default function MemberEnroll() {
         Back
       </Link>
 
-      {/* Status pill */}
       <div className="relative z-10 mb-8">
         <div
           className={`inline-flex items-center gap-2.5 rounded-full px-5 py-2 border ${isComplete ? "bg-emerald-500/10 border-emerald-500/20" : "bg-white/[0.03] border-white/10"}`}
@@ -203,7 +199,6 @@ export default function MemberEnroll() {
         </div>
       </div>
 
-      {/* Title */}
       <div className="relative z-10 text-center mb-12">
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white">
           {isComplete ? "All set!" : `Enrolling ${firstName}`}
@@ -211,7 +206,6 @@ export default function MemberEnroll() {
         <p className="mt-3 text-gray-500 text-sm md:text-base">{status}</p>
       </div>
 
-      {/* Scan circle */}
       <div className="relative z-10">
         <div
           className={`absolute inset-[-20px] rounded-full transition-all duration-1000 ${isComplete ? "bg-emerald-500/10 shadow-[0_0_80px_rgba(16,185,129,0.15)]" : "bg-emerald-500/[0.03] shadow-[0_0_60px_rgba(16,185,129,0.08)]"}`}
@@ -344,7 +338,6 @@ export default function MemberEnroll() {
         </div>
       </div>
 
-      {/* Bottom */}
       <div className="relative z-10 mt-12 w-80 md:w-[380px]">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -399,5 +392,19 @@ export default function MemberEnroll() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MemberEnroll() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0A0A0B] flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <MemberEnrollContent />
+    </Suspense>
   );
 }
