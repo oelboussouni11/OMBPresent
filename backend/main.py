@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routers.enroll import router as enroll_router
 from routers.attendance import router as attendance_router
 from routers.groups import router as groups_router
+from routers.members import router as members_router
 
 app = FastAPI(title="OMBPresent API")
 
@@ -17,6 +18,7 @@ app.add_middleware(
 app.include_router(enroll_router, prefix="/api")
 app.include_router(attendance_router, prefix="/api")
 app.include_router(groups_router, prefix="/api")
+app.include_router(members_router, prefix="/api")
 
 
 @app.get("/")
