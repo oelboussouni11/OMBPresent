@@ -1,13 +1,14 @@
 "use client";
 
+import { Suspense } from "react";
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 const TOTAL_SEGMENTS = 8;
-const API_URL = "http://localhost:8000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
-export default function EnrollScan() {
+function EnrollScanContent() {
   const searchParams = useSearchParams();
   const name = searchParams.get("name") || "Unknown";
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -86,14 +87,12 @@ export default function EnrollScan() {
     );
   }, [name, sending]);
 
-  // Auto-capture every 2 seconds
   useEffect(() => {
     if (!cameraReady || completedSegments >= TOTAL_SEGMENTS) return;
     const interval = setInterval(captureAndSend, 750);
     return () => clearInterval(interval);
   }, [cameraReady, completedSegments, captureAndSend]);
 
-  // Rotating scan line
   useEffect(() => {
     if (!cameraReady || completedSegments >= TOTAL_SEGMENTS) return;
     const interval = setInterval(() => {
@@ -116,8 +115,6 @@ export default function EnrollScan() {
           backgroundSize: "60px 60px",
         }}
       />
-
-      {/* Hidden canvas for capture */}
       <canvas ref={canvasRef} className="hidden" />
 
       <Link
@@ -138,7 +135,6 @@ export default function EnrollScan() {
         Back
       </Link>
 
-      {/* Status pill */}
       <div className="relative z-10 mb-8">
         <div
           className={`inline-flex items-center gap-2.5 rounded-full px-5 py-2 border ${isComplete ? "bg-emerald-500/10 border-emerald-500/20" : "bg-white/[0.03] border-white/10"}`}
@@ -159,7 +155,6 @@ export default function EnrollScan() {
         </div>
       </div>
 
-      {/* Title */}
       <div className="relative z-10 text-center mb-12">
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white">
           {isComplete ? "You're all set." : `Enrolling ${name}`}
@@ -167,7 +162,6 @@ export default function EnrollScan() {
         <p className="mt-3 text-gray-500 text-sm md:text-base">{status}</p>
       </div>
 
-      {/* Main scan area */}
       <div className="relative z-10">
         <div
           className={`absolute inset-[-20px] rounded-full transition-all duration-1000 ${isComplete ? "bg-emerald-500/10 shadow-[0_0_80px_rgba(16,185,129,0.15)]" : "bg-emerald-500/[0.03] shadow-[0_0_60px_rgba(16,185,129,0.08)]"}`}
@@ -300,7 +294,6 @@ export default function EnrollScan() {
         </div>
       </div>
 
-      {/* Bottom */}
       <div className="relative z-10 mt-12 w-80 md:w-[380px]">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -364,5 +357,19 @@ export default function EnrollScan() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function EnrollScan() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0A0A0B] flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <EnrollScanContent />
+    </Suspense>
   );
 }
